@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: mydocker3692/frontend-new
+        image: mydocker3692/zepto:frontend-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

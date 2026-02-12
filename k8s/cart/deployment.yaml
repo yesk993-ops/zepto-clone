@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: cart-service
-        image: mydocker3692/cart
+        image: mydocker3692/zepto:cart-service-latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
