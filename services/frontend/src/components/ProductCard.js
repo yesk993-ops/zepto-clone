@@ -1,26 +1,28 @@
 export default function ProductCard({product}){
 
  return(
+  <div className="bg-white rounded-lg shadow-sm p-3">
 
-  <div className="bg-white rounded-xl shadow-md hover:shadow-2xl transition duration-300 p-4">
+    <img
+      src={product.image}
+      className="h-32 w-full object-cover rounded"
+      alt=""
+    />
 
-   <img
-    src={product.image}
-    className="h-48 w-full object-cover rounded-lg"
-    alt=""
-   />
+    <p className="text-sm mt-2">{product.name}</p>
 
-   <h3 className="mt-3 font-semibold">{product.name}</h3>
+    <div className="flex justify-between items-center mt-2">
 
-   <p className="text-orange-600 font-bold text-lg">
-    ₹{product.price}
-   </p>
+      <span className="font-bold text-purple-700">
+        ₹{product.price}
+      </span>
 
-   <button className="mt-3 bg-yellow-400 px-4 py-2 rounded-lg hover:bg-yellow-500 w-full">
-    Add to Cart
-   </button>
+      <button className="bg-purple-600 text-white px-3 py-1 rounded-lg">
+        ADD
+      </button>
+
+    </div>
 
   </div>
-
  )
 }

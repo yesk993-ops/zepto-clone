@@ -1,5 +1,5 @@
 import Header from "../components/Header"
-import Hero from "../components/Hero"
+import CategoryBar from "../components/CategoryBar"
 import ProductGrid from "../components/ProductGrid"
 
 const products=[
@@ -13,9 +13,16 @@ export default function Home(){
 
  return(
   <div>
+
    <Header/>
-   <Hero/>
+   <CategoryBar/>
+
    <ProductGrid products={products}/>
+
+   <div className="fixed bottom-5 right-5 bg-purple-700 text-white px-6 py-3 rounded-full shadow-lg">
+     🛒 View Cart
+   </div>
+
   </div>
  )
 }
