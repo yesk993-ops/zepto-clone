@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: product
-        image: mydocker3692/zepto:product-service
+        image: mydocker3692/zepto:product-service-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
