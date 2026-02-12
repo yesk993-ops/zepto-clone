@@ -1,79 +1,95 @@
 pipeline {
 
- agent any
+  agent any
 
- environment {
+  environment {
+    IMAGE_REPO = "mydocker3692/zepto"
+  }
 
-   IMAGE_REPO = "mydocker3692/zepto"
-   IMAGE_TAG = "${BUILD_NUMBER}"
+  stages {
 
- }
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
 
- stages {
+    stage('Docker Login') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: 'docker',
+          usernameVariable: 'USER',
+          passwordVariable: 'PASS'
+        )]) {
+          sh 'echo $PASS | docker login -u $USER --password-stdin'
+        }
+      }
+    }
 
-   stage('Checkout') {
-     steps {
-       checkout scm
-     }
-   }
+    stage('Build and Push (Parallel)') {
 
-   stage('Docker Login') {
-     steps {
-       withCredentials([usernamePassword(
-         credentialsId: 'docker',
-         usernameVariable: 'USER',
-         passwordVariable: 'PASS'
-       )]) {
+      parallel {
 
-         sh "echo \$PASS | docker login -u \$USER --password-stdin"
+        stage('product-service') {
+          steps {
+            sh '''
+            docker build -t $IMAGE_REPO:product-service-latest services/product-service
+            docker push $IMAGE_REPO:product-service-latest
+            '''
+          }
+        }
 
-       }
-     }
-   }
+        stage('catalog-service') {
+          steps {
+            sh '''
+            docker build -t $IMAGE_REPO:catalog-service-latest services/catalog-service
+            docker push $IMAGE_REPO:catalog-service-latest
+            '''
+          }
+        }
 
-   stage('Build and Push Images') {
-     steps {
+        stage('cart-service') {
+          steps {
+            sh '''
+            docker build -t $IMAGE_REPO:cart-service-latest services/cart-service
+            docker push $IMAGE_REPO:cart-service-latest
+            '''
+          }
+        }
 
-       script {
+        stage('payment-service') {
+          steps {
+            sh '''
+            docker build -t $IMAGE_REPO:payment-service-latest services/payment-service
+            docker push $IMAGE_REPO:payment-service-latest
+            '''
+          }
+        }
 
-         def services = [
-           "product-service",
-           "catalog-service",
-           "cart-service",
-           "payment-service",
-           "frontend"
-         ]
+        stage('frontend') {
+          steps {
+            sh '''
+            docker build -t $IMAGE_REPO:frontend-latest services/frontend
+            docker push $IMAGE_REPO:frontend-latest
+            '''
+          }
+        }
 
-         for (svc in services) {
+      }
+    }
 
-           sh """
-           docker build -t ${IMAGE_REPO}:${svc}-${IMAGE_TAG} services/${svc}
-           docker tag ${IMAGE_REPO}:${svc}-${IMAGE_TAG} ${IMAGE_REPO}:${svc}-latest
-           docker push ${IMAGE_REPO}:${svc}-${IMAGE_TAG}
-           docker push ${IMAGE_REPO}:${svc}-latest
-           """
+    stage('Deploy to Kubernetes') {
+      steps {
+        sh '''
+        kubectl apply -R -f k8s/
+        kubectl rollout restart deployment product
+        kubectl rollout restart deployment catalog
+        kubectl rollout restart deployment cart
+        kubectl rollout restart deployment payment
+        kubectl rollout restart deployment frontend
+        '''
+      }
+    }
 
-         }
-
-       }
-
-     }
-   }
-
-   stage('Deploy to Kubernetes') {
-     steps {
-
-       sh """
-       kubectl apply -R -f k8s/
-       kubectl rollout restart deployment product
-       kubectl rollout restart deployment catalog
-       kubectl rollout restart deployment cart
-       kubectl rollout restart deployment payment
-       kubectl rollout restart deployment frontend
-       """
-
-     }
-   }
-
- }
+  }
 }
