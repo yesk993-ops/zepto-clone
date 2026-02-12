@@ -1,0 +1,126 @@
+pipeline {
+
+  agent any
+
+  environment {
+    IMAGE_REPO = "mydocker3692/zepto"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Docker Login') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: 'docker',
+          usernameVariable: 'USER',
+          passwordVariable: 'PASS'
+        )]) {
+          sh 'echo $PASS | docker login -u $USER --password-stdin'
+        }
+      }
+    }
+
+    stage('Build and Push (Parallel - Smart Skip)') {
+
+      parallel {
+
+        stage('product-service') {
+          steps {
+            script {
+              sh '''
+              if docker manifest inspect $IMAGE_REPO:product-service-latest > /dev/null 2>&1; then
+                echo "Image exists. Skipping build."
+              else
+                echo "Image not found. Building..."
+                docker build -t $IMAGE_REPO:product-service-latest services/product-service
+                docker push $IMAGE_REPO:product-service-latest
+              fi
+              '''
+            }
+          }
+        }
+
+        stage('catalog-service') {
+          steps {
+            script {
+              sh '''
+              if docker manifest inspect $IMAGE_REPO:catalog-service-latest > /dev/null 2>&1; then
+                echo "Image exists. Skipping build."
+              else
+                docker build -t $IMAGE_REPO:catalog-service-latest services/catalog-service
+                docker push $IMAGE_REPO:catalog-service-latest
+              fi
+              '''
+            }
+          }
+        }
+
+        stage('cart-service') {
+          steps {
+            script {
+              sh '''
+              if docker manifest inspect $IMAGE_REPO:cart-service-latest > /dev/null 2>&1; then
+                echo "Image exists. Skipping build."
+              else
+                docker build -t $IMAGE_REPO:cart-service-latest services/cart-service
+                docker push $IMAGE_REPO:cart-service-latest
+              fi
+              '''
+            }
+          }
+        }
+
+        stage('payment-service') {
+          steps {
+            script {
+              sh '''
+              if docker manifest inspect $IMAGE_REPO:payment-service-latest > /dev/null 2>&1; then
+                echo "Image exists. Skipping build."
+              else
+                docker build -t $IMAGE_REPO:payment-service-latest services/payment-service
+                docker push $IMAGE_REPO:payment-service-latest
+              fi
+              '''
+            }
+          }
+        }
+
+        stage('frontend') {
+          steps {
+            script {
+              sh '''
+              if docker manifest inspect $IMAGE_REPO:frontend-latest > /dev/null 2>&1; then
+                echo "Image exists. Skipping build."
+              else
+                docker build -t $IMAGE_REPO:frontend-latest services/frontend
+                docker push $IMAGE_REPO:frontend-latest
+              fi
+              '''
+            }
+          }
+        }
+
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        sh '''
+        kubectl apply -R -f k8s/
+        kubectl rollout restart deployment product
+        kubectl rollout restart deployment catalog
+        kubectl rollout restart deployment cart
+        kubectl rollout restart deployment payment
+        kubectl rollout restart deployment frontend
+        '''
+      }
+    }
+
+  }
+}
