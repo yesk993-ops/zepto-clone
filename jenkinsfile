@@ -1,0 +1,79 @@
+pipeline {
+
+ agent any
+
+ environment {
+
+   IMAGE_REPO = "mydocker3692/zepto"
+   IMAGE_TAG = "${BUILD_NUMBER}"
+
+ }
+
+ stages {
+
+   stage('Checkout') {
+     steps {
+       checkout scm
+     }
+   }
+
+   stage('Docker Login') {
+     steps {
+       withCredentials([usernamePassword(
+         credentialsId: 'docker',
+         usernameVariable: 'USER',
+         passwordVariable: 'PASS'
+       )]) {
+
+         sh "echo \$PASS | docker login -u \$USER --password-stdin"
+
+       }
+     }
+   }
+
+   stage('Build and Push Images') {
+     steps {
+
+       script {
+
+         def services = [
+           "product-service",
+           "catalog-service",
+           "cart-service",
+           "payment-service",
+           "frontend"
+         ]
+
+         for (svc in services) {
+
+           sh """
+           docker build -t ${IMAGE_REPO}:${svc}-${IMAGE_TAG} services/${svc}
+           docker tag ${IMAGE_REPO}:${svc}-${IMAGE_TAG} ${IMAGE_REPO}:${svc}-latest
+           docker push ${IMAGE_REPO}:${svc}-${IMAGE_TAG}
+           docker push ${IMAGE_REPO}:${svc}-latest
+           """
+
+         }
+
+       }
+
+     }
+   }
+
+   stage('Deploy to Kubernetes') {
+     steps {
+
+       sh """
+       kubectl apply -f k8s/
+       kubectl rollout restart deployment product
+       kubectl rollout restart deployment catalog
+       kubectl rollout restart deployment cart
+       kubectl rollout restart deployment payment
+       kubectl rollout restart deployment frontend
+       """
+
+     }
+   }
+
+ }
+}
