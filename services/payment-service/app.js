@@ -1,8 +1,14 @@
-const express = require("express");
+const express = require('express');
 const app = express();
 
-app.get("/", (req,res)=> {
- res.send("payment-service running");
+app.use(express.json());
+
+app.post('/pay',(req,res)=>{
+
+ setTimeout(()=>{
+   res.send({status:"Payment successful"});
+ },2000);
+
 });
 
-app.listen(3000,()=>console.log("payment-service started"));
+app.listen(3002);
